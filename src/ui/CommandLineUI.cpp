@@ -81,7 +81,7 @@ int CommandLineUI::run() {
     raytracer->traceImage(width, height);
     raytracer->waitRender();
     if (aaSwitch()) {
-      raytracer->aaImage(width, height);
+      raytracer->aaImage();
       raytracer->waitRender();
     }
 

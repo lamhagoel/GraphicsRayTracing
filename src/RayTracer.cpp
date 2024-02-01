@@ -351,7 +351,7 @@ void RayTracer::traceImage(int w, int h) {
   }
 
   if(traceUI->aaSwitch()) {
-    aaImage(w/samples, h/samples);
+    aaImage();
   }
   
   // YOUR CODE HERE
@@ -367,12 +367,12 @@ void RayTracer::traceImage(int w, int h) {
 // TODO: last part
 // TODO: Check the role of threshold??
 // TODO: Verify if it works as expected
-int RayTracer::aaImage(int w, int h) {
+int RayTracer::aaImage() {
   // YOUR CODE HERE
   // FIXME: Implement Anti-aliasing here
   //
 
-  cout<<"aaImage: "<<w<<" "<<h<<" "<<samples<<" "<<buffer.size()<<"\n";
+  // cout<<"aaImage: "<<w<<" "<<h<<" "<<samples<<" "<<buffer.size()<<"\n";
 
   // Nothing to do if we weren't oversampling
   if (samples<=1) {
@@ -381,6 +381,12 @@ int RayTracer::aaImage(int w, int h) {
 
   int overSamplingFactor = samples*samples;
   int imageSize = buffer.size()/overSamplingFactor;
+
+  int w = 0, h = 0;
+  unsigned char *buf = NULL;
+  getBuffer(buf, w, h);
+  w = w/samples;
+  h = h/samples;
 
   if (imageSize != w * h * 3) {
     // Current buffer size is not as expected - maybe aaImage has been called previously?
@@ -400,7 +406,7 @@ int RayTracer::aaImage(int w, int h) {
       long int sum0 = 0, sum1 = 0, sum2 = 0; // TODO: Can we change this to a vector instead?
       for (int l = 0; l < samples; l++) {
         for (int k = 0; k < samples; k++) {
-          unsigned char *bufferLoc = buffer.data() + (j*w*samples*samples + l*w*samples + i*samples + k) * 3;
+          unsigned char *bufferLoc = buf + (j*w*samples*samples + l*w*samples + i*samples + k) * 3;
           // cout<<(j*w*samples*samples + l*w*samples + i*samples + k)<<"\n";
           // cout<<((i*samples+k) + (j*samples+l) * w)<<"\n";
           // cout<<((i+j*w)*samples*samples + (k+l*samples))<<"\n"; // TODO: Check which is the correct expression - basically denotes how many pixels before this
