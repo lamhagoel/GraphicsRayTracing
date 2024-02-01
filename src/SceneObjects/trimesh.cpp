@@ -95,7 +95,42 @@ bool TrimeshFace::intersectLocal(ray &r, isect &i) const {
        assign this material to the intersection.
      - If neither is true, assign the parent's material to the intersection.
   */
-
+  // vertices
+  glm::dvec3 A = this->parent->vertices[0];
+  glm::dvec3 B = this->parent->vertices[0];
+  glm::dvec3 C = this->parent->vertices[0];
+  // get normal through vertices
+  glm::dvec3 N = glm::normalize(glm::cross(B - A, C - A));
+  // TODO: confirm
+  // checking bug of shadows with t >= epsilon (10^-6)
+  glm::dvec3 direction = r.getDirection();
+  glm::dvec3 origin = r.getPosition();
+  double t_num = glm::dot(A, N);
+  t_num = t_num - glm::dot(origin, N);
+  double t = t_num / glm::dot(direction, N);
+  if (t <= 0.00000001) {
+    return false; 
+  }
+  // if P is inside, must be on correct side of lines
+  glm::dvec3 P = r.at(t);
+  // the following booleans should be true for the point to be inside
+  glm::dvec3 B_A = B - A;
+  glm::dvec3 C_B = C - B;
+  glm::dvec3 A_C = A - C;
+  glm::dvec3 P_A = P - A;
+  glm::dvec3 P_B = P - B;
+  glm::dvec3 P_C = P - C;
+  glm::dvec3 check_1_1 = glm::cross(B_A, P_A);
+  glm::dvec3 check_2_1 = glm::cross(C_B, P_B);
+  glm::dvec3 check_3_1 = glm::cross(A_C, P_C);
+  bool check1 = glm::dot(check_1_1, N) >= 0;
+  bool check2 = glm::dot(check_2_1, N) >= 0;
+  bool check3 = glm::dot(check_3_1, N) >= 0;
+  if (!check1 || !check2 || !check3) {
+    return false;
+  }
+  // we have a collision
+  
   i.setObject(this->parent);
   return false;
 }
