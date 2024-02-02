@@ -80,28 +80,16 @@ bool TrimeshFace::intersect(ray &r, isect &i) const {
 // and put the parameter in t and the barycentric coordinates of the
 // intersection in u (alpha) and v (beta).
 bool TrimeshFace::intersectLocal(ray &r, isect &i) const {
-  // YOUR CODE HERE
-  //
-  // FIXME: Add ray-trimesh intersection
-
-  /* To determine the color of an intersection, use the following rules:
-     
-     
-     - If neither is true, assign the parent's material to the intersection.
-  */
-  // vertices
-  glm::dvec3 A = this->parent->vertices[0];
-  glm::dvec3 B = this->parent->vertices[0];
-  glm::dvec3 C = this->parent->vertices[0];
-  // get normal through vertices
-  glm::dvec3 N = glm::normalize(glm::cross(B - A, C - A));
+  glm::dvec3 A = parent->vertices[ids[0]];
+  glm::dvec3 B = parent->vertices[ids[1]];
+  glm::dvec3 C = parent->vertices[ids[2]];
   // TODO: confirm
   // checking bug of shadows with t >= epsilon (10^-6)
   glm::dvec3 direction = r.getDirection();
   glm::dvec3 origin = r.getPosition();
-  double t_num = glm::dot(A, N);
-  t_num = t_num - glm::dot(origin, N);
-  double t = t_num / glm::dot(direction, N);
+  double t_num = glm::dot(A, normal);
+  t_num = t_num - glm::dot(origin, normal);
+  double t = t_num / glm::dot(direction, normal);
   if (t <= 0.00000001) {
     return false; 
   }
@@ -114,40 +102,43 @@ bool TrimeshFace::intersectLocal(ray &r, isect &i) const {
   glm::dvec3 P_A = P - A;
   glm::dvec3 P_B = P - B;
   glm::dvec3 P_C = P - C;
+  glm::dvec3 C_P = C - P;
   glm::dvec3 C_A = C - A;
+  glm::dvec3 B_P = B - P;
+  glm::dvec3 A_P = A - P;
   glm::dvec3 check_1_1 = glm::cross(B_A, P_A);
   glm::dvec3 check_2_1 = glm::cross(C_B, P_B);
   glm::dvec3 check_3_1 = glm::cross(A_C, P_C);
-  bool check1 = glm::dot(check_1_1, N) >= 0;
-  bool check2 = glm::dot(check_2_1, N) >= 0;
-  bool check3 = glm::dot(check_3_1, N) >= 0;
-  if (!check1 || !check2 || !check3) {
-    return false;
-  }
-  // we have a collision
-
-  // get the barycentric coordinates, we choose A as our p1, B as p2 and C as p3
-  double m2 = (glm::dot(B_A, B_A) * glm::dot(P_A, B_A)) + (glm::dot(B_A, C_A) * glm::dot(P_A, C_A));
-  double m3 = (glm::dot(C_A, B_A) * glm::dot(P_A, B_A)) + (glm::dot(C_A, C_A) * glm::dot(P_A, C_A));
-  double m1 = 1 - m2 - m3;
-
-  // check if inside the triangle considering also the bug of 0.00000001
-  if (m1 >= 0 && m2 >= 0 && m3 >= 0 && (m1 + m2 + m3 <= 1.0 + 0.00000001) && (m1 + m2 + m3 >= 1.0 + 0.00000001)) {
-    i.setBary(m1, m2, m3);
-    i.setT(t);
-    // TODO: confirm if it is like this
+  double check1 = glm::dot(normal, check_1_1);
+  double check2 = glm::dot(normal, check_2_1);
+  double check3 = glm::dot(normal, check_3_1);
+  if ((check1 >= 0 && check2 >= 0 && check3 >= 0)) {
+    // we have a collision
     i.setObject(this->parent);
+    i.setN(normal);
+    i.setMaterial(this->parent->getMaterial());
+    i.setT(t);
+    // get the barycentric coordinates
+    double abc = (glm::dot(glm::cross(B_A, C_A), normal));
+    double pbc = (glm::dot(glm::cross(B_P, C_P), normal));
+    double pca = (glm::dot(glm::cross(C_P, A_C), normal));
+    double m1 = (pbc / abc);
+    double m2 = (pca / abc);
+    double m3 = 1.0 - m1 - m2;
+
+    i.setBary(m1, m2, m3);
+    i.setUVCoordinates(glm::dvec2(m1, m2));
 
     // TODO: Phong interpolation, confirm if we need to set the normals like this
-     // I think we can set the normal by check this boolean this->parent->vertNorms, bc how the json is read
-    if (this->parent->vertNorms) {
+      // I think we can set the normal by check this boolean this->parent->vertNorms, bc how the json is read
+    if (parent->vertNorms) {
       glm::dvec3 n1 = m1 * parent->normals[ids[0]];
       glm::dvec3 n2 = m2 * parent->normals[ids[1]];
       glm::dvec3 n3 = m3 * parent->normals[ids[2]];
       glm::dvec3 new_normal = glm::normalize(n1 + n2 + n3);
       i.setN(new_normal);
     } else {
-      i.setN(N);
+      i.setN(normal);
     }
 
     // TODO: I think is milestone 2
@@ -155,7 +146,7 @@ bool TrimeshFace::intersectLocal(ray &r, isect &i) const {
     //      the UV coordinates of the three vertices of the face, then assign it to
     //      the intersection using i.setUVCoordinates().
     // if (!(this->parent->uvCoords).empty()) {
-    
+
     // } else {
       
     // }
@@ -165,8 +156,7 @@ bool TrimeshFace::intersectLocal(ray &r, isect &i) const {
     //    face. Create a new material by copying the parent's material, set the
     //    diffuse color of this material to the interpolated color, and then 
     //    assign this material to the intersection.
-    if (!(this->parent->vertColors).empty()) {
-      cout<<"caca?\n";
+    if (!(parent->vertColors).empty()) {
       glm::dvec3 c1 = m1 * parent->vertColors[ids[0]];
       glm::dvec3 c2 = m2 * parent->vertColors[ids[2]];
       glm::dvec3 c3 = m3 * parent->vertColors[ids[3]];
@@ -176,14 +166,11 @@ bool TrimeshFace::intersectLocal(ray &r, isect &i) const {
       Material m = this->parent->getMaterial();
       m.setDiffuse(new_color);
       i.setMaterial(m);
-      cout<<"caca2?\n";
     } else {
-      cout<<"caca3?\n";
       i.setMaterial(this->parent->getMaterial());
     }
     return true;
   }
-
   return false;
 }
 
