@@ -85,14 +85,8 @@ bool TrimeshFace::intersectLocal(ray &r, isect &i) const {
   // FIXME: Add ray-trimesh intersection
 
   /* To determine the color of an intersection, use the following rules:
-     - If the parent mesh has non-empty `uvCoords`, barycentrically interpolate
-       the UV coordinates of the three vertices of the face, then assign it to
-       the intersection using i.setUVCoordinates().
-     - Otherwise, if the parent mesh has non-empty `vertexColors`,
-       barycentrically interpolate the colors from the three vertices of the
-       face. Create a new material by copying the parent's material, set the
-       diffuse color of this material to the interpolated color, and then 
-       assign this material to the intersection.
+     
+     
      - If neither is true, assign the parent's material to the intersection.
   */
   // vertices
@@ -143,6 +137,8 @@ bool TrimeshFace::intersectLocal(ray &r, isect &i) const {
     i.setT(t);
     // TODO: confirm if it is like this
     i.setObject(this->parent);
+
+    // TODO: Phong interpolation, confirm if we need to set the normals like this
      // I think we can set the normal by check this boolean this->parent->vertNorms, bc how the json is read
     if (this->parent->vertNorms) {
       glm::dvec3 n1 = m1 * parent->normals[ids[0]];
@@ -153,14 +149,39 @@ bool TrimeshFace::intersectLocal(ray &r, isect &i) const {
     } else {
       i.setN(N);
     }
-   
-    if (!(this->parent->uvCoords).empty()) {
 
-    } else if (!(this->parent->vertColors).empty()) {
+    // TODO: I think is milestone 2
+    //  - If the parent mesh has non-empty `uvCoords`, barycentrically interpolate
+    //      the UV coordinates of the three vertices of the face, then assign it to
+    //      the intersection using i.setUVCoordinates().
+    // if (!(this->parent->uvCoords).empty()) {
+    
+    // } else {
+      
+    // }
 
+    // - Otherwise, if the parent mesh has non-empty `vertexColors`,
+    //    barycentrically interpolate the colors from the three vertices of the
+    //    face. Create a new material by copying the parent's material, set the
+    //    diffuse color of this material to the interpolated color, and then 
+    //    assign this material to the intersection.
+    if (!(this->parent->vertColors).empty()) {
+      cout<<"caca?\n";
+      glm::dvec3 c1 = m1 * parent->vertColors[ids[0]];
+      glm::dvec3 c2 = m2 * parent->vertColors[ids[2]];
+      glm::dvec3 c3 = m3 * parent->vertColors[ids[3]];
+      glm::dvec3 new_color = glm::normalize(c1 + c2 + c3);
+      // confirm if & before m (&m) or not
+      // Material m = this->parent->getMaterial();
+      Material m = this->parent->getMaterial();
+      m.setDiffuse(new_color);
+      i.setMaterial(m);
+      cout<<"caca2?\n";
     } else {
+      cout<<"caca3?\n";
       i.setMaterial(this->parent->getMaterial());
     }
+    return true;
   }
 
   return false;
