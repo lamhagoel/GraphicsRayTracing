@@ -120,6 +120,7 @@ bool TrimeshFace::intersectLocal(ray &r, isect &i) const {
   glm::dvec3 P_A = P - A;
   glm::dvec3 P_B = P - B;
   glm::dvec3 P_C = P - C;
+  glm::dvec3 C_A = C - A;
   glm::dvec3 check_1_1 = glm::cross(B_A, P_A);
   glm::dvec3 check_2_1 = glm::cross(C_B, P_B);
   glm::dvec3 check_3_1 = glm::cross(A_C, P_C);
@@ -130,8 +131,38 @@ bool TrimeshFace::intersectLocal(ray &r, isect &i) const {
     return false;
   }
   // we have a collision
-  
-  i.setObject(this->parent);
+
+  // get the barycentric coordinates, we choose A as our p1, B as p2 and C as p3
+  double m2 = (glm::dot(B_A, B_A) * glm::dot(P_A, B_A)) + (glm::dot(B_A, C_A) * glm::dot(P_A, C_A));
+  double m3 = (glm::dot(C_A, B_A) * glm::dot(P_A, B_A)) + (glm::dot(C_A, C_A) * glm::dot(P_A, C_A));
+  double m1 = 1 - m2 - m3;
+
+  // check if inside the triangle considering also the bug of 0.00000001
+  if (m1 >= 0 && m2 >= 0 && m3 >= 0 && (m1 + m2 + m3 <= 1.0 + 0.00000001) && (m1 + m2 + m3 >= 1.0 + 0.00000001)) {
+    i.setBary(m1, m2, m3);
+    i.setT(t);
+    // TODO: confirm if it is like this
+    i.setObject(this->parent);
+     // I think we can set the normal by check this boolean this->parent->vertNorms, bc how the json is read
+    if (this->parent->vertNorms) {
+      glm::dvec3 n1 = m1 * parent->normals[ids[0]];
+      glm::dvec3 n2 = m2 * parent->normals[ids[1]];
+      glm::dvec3 n3 = m3 * parent->normals[ids[2]];
+      glm::dvec3 new_normal = glm::normalize(n1 + n2 + n3);
+      i.setN(new_normal);
+    } else {
+      i.setN(N);
+    }
+   
+    if (!(this->parent->uvCoords).empty()) {
+
+    } else if (!(this->parent->vertColors).empty()) {
+
+    } else {
+      i.setMaterial(this->parent->getMaterial());
+    }
+  }
+
   return false;
 }
 
