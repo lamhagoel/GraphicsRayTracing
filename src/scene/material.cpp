@@ -75,8 +75,9 @@ glm::dvec3 Material::shade(Scene *scene, const ray &r, const isect &i) const {
     double V_dot_R = pow(max(0.0, glm::dot(R, V)), shininess(i));
 
     glm::dvec3 ISpecular = ks(i)*V_dot_R;
+    ray rShadow(r.at(i.getT()), pLight->getDirection(r.at(i.getT())), glm::dvec3(1,1,1), ray::SHADOW);
     // TODO: include light attenuation
-    glm::dvec3 I_attenuation = pLight->distanceAttenuation(r.at(i.getT()))*pLight->shadowAttenuation(r, r.at(i.getT()));
+    glm::dvec3 I_attenuation = pLight->distanceAttenuation(r.at(i.getT()))*pLight->shadowAttenuation(rShadow, r.at(i.getT()));
     result += (IDiffuse + ISpecular) * I_attenuation;
   }
 
