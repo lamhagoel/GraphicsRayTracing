@@ -133,8 +133,7 @@ glm::dvec3 RayTracer::traceRay(ray &r, const glm::dvec3 &thresh, int depth,
       glm::dvec3 w_in = r.getDirection();
       glm::dvec3 N = i.getN();
       // direction: w_ref normalize
-      glm::dvec3 w_ref = glm::normalize(w_in - 2 * (glm::dot(N, w_in))*N);
-      
+      glm::dvec3 w_ref = glm::normalize(w_in - 2 * glm::dot(N, w_in)*N);
       ray r_reflection(pos, w_ref, glm::dvec3(1, 1, 1),
           ray::REFLECTION);
       colorC += m.kr(i) * traceRay(r_reflection, thresh, depth - 1, t);
@@ -157,14 +156,14 @@ glm::dvec3 RayTracer::traceRay(ray &r, const glm::dvec3 &thresh, int depth,
       if (cos_i >= 0) { // entering the object
         n_1 = 1.0;
         n_2 = m.index(i);
-      } else { // we are inside an object, therefore, exiting the object
+      } else if (cos_i < 0) { // we are inside an object, therefore, exiting the object
         n_1 = m.index(i);
         n_2 = 1.0;
         // normal should be negative
         N = -1.0 * N;
         // therefore it changes the cos_i
         cos_i = glm::dot(N, V);
-      }
+      } 
       double cos_i_2 = pow(cos_i, 2);
       double eta = n_1 / n_2;
       double cos_t_2 = 1 - pow(eta, 2) * (1 - cos_i_2);
@@ -176,10 +175,11 @@ glm::dvec3 RayTracer::traceRay(ray &r, const glm::dvec3 &thresh, int depth,
         glm::dvec3 t_refract = (eta * cos_i - cos_t) * N - (eta * V);
         ray r_refraction(pos, t_refract, glm::dvec3(1, 1, 1),
           ray::REFRACTION);
-        colorC += traceRay(r_refraction, thresh, depth - 1, t);
+        // TODO: confirm if m.kt(i) goes here
+        colorC += traceRay(r_refraction, thresh, depth - 1, t) * m.kt(i);
       } else { // the square root is imaginary so we have total internal reflection
         // TODO: since the reference does not have this, confirm if it's better w/o this.
-        glm::dvec3 r_t_reflection = glm::normalize(r.getDirection() - 2 * (glm::dot(N, r.getDirection()))*N);
+        glm::dvec3 r_t_reflection = glm::normalize(r.getDirection() - 2 * glm::dot(N, r.getDirection()) * N);
         ray t_i_reflection(pos, r_t_reflection, glm::dvec3(1, 1, 1),
           ray::REFLECTION);
         // TODO: confirm if we multiply by m.kr(i) or not here
