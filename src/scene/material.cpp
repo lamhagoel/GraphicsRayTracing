@@ -69,16 +69,23 @@ glm::dvec3 Material::shade(Scene *scene, const ray &r, const isect &i) const {
     // glm::reflect	(	genType const & 	I, genType const & 	N )	
     // For the incident vector I and surface orientation N, returns the reflection direction : 
     // result = I - 2.0 * dot(N, I) * N.
-    glm::dvec3 R = glm::normalize(glm::reflect(r.getDirection(), i.getN()));
+    // changed:
+    // glm::dvec3 R = glm::normalize(glm::reflect(r.getDirection(), i.getN()));
+    glm::dvec3 R = 2 * glm::dot(i.getN(), Lambertian) * i.getN() - Lambertian;
     // scene->getCamera().getEye() gives the location of the camera eye
-    glm::dvec3 V = glm::normalize(scene->getCamera().getEye() - r.at(i.getT()));
-    double V_dot_R = pow(max(0.0, glm::dot(R, V)), shininess(i));
+    // changed:
+    // glm::dvec3 V = glm::normalize(scene->getCamera().getEye() - r.at(i.getT()));
+    glm::dvec3 V = -r.getDirection();
+    // changed
+    // double V_dot_R = pow(max(0.0, glm::dot(R, V)), shininess(i));
+    double V_dot_R = pow(max(0.0, glm::dot(R, V)), this->shininess(i));
 
     glm::dvec3 ISpecular = ks(i)*V_dot_R;
-    ray rShadow(r.at(i.getT()), pLight->getDirection(r.at(i.getT())), glm::dvec3(1,1,1), ray::SHADOW);
+    ray rShadow(r.at(i.getT()), pLight->getDirection(r.at(i.getT())), glm::dvec3(1,1,1), ray::SHADOW);	
     // TODO: include light attenuation
-    glm::dvec3 I_attenuation = pLight->distanceAttenuation(r.at(i.getT()))*pLight->shadowAttenuation(rShadow, r.at(i.getT()));
-    result += (IDiffuse + ISpecular) * I_attenuation;
+    // glm::dvec3 I_attenuation = pLight->distanceAttenuation(r.at(i.getT()))*pLight->shadowAttenuation(r, r.at(i.getT()));
+    glm::dvec3 I_attenuation = min(1.0, pLight->distanceAttenuation(r.at(i.getT())))*pLight->shadowAttenuation(rShadow, r.at(i.getT()));
+    result += I_attenuation * (IDiffuse + ISpecular);
   }
 
   return result;
