@@ -5,6 +5,7 @@
 #include <float.h>
 #include <string.h>
 #include "../ui/TraceUI.h"
+#include <iostream>
 extern TraceUI *traceUI;
 extern TraceUI *traceUI;
 
@@ -158,16 +159,16 @@ bool TrimeshFace::intersectLocal(ray &r, isect &i) const {
     //    assign this material to the intersection.
     if (!(parent->vertColors).empty()) {
       glm::dvec3 c1 = m1 * parent->vertColors[ids[0]];
-      glm::dvec3 c2 = m2 * parent->vertColors[ids[2]];
-      glm::dvec3 c3 = m3 * parent->vertColors[ids[3]];
+      glm::dvec3 c2 = m2 * parent->vertColors[ids[1]];
+      glm::dvec3 c3 = m3 * parent->vertColors[ids[2]];
       glm::dvec3 new_color = glm::normalize(c1 + c2 + c3);
       // confirm if & before m (&m) or not
       // Material m = this->parent->getMaterial();
-      Material m = this->parent->getMaterial();
+      Material m = parent->getMaterial();
       m.setDiffuse(new_color);
       i.setMaterial(m);
     } else {
-      i.setMaterial(this->parent->getMaterial());
+      i.setMaterial(parent->getMaterial());
     }
     return true;
   }
@@ -197,4 +198,3 @@ void Trimesh::generateNormals() {
 
   vertNorms = true;
 }
-
