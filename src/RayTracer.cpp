@@ -183,22 +183,27 @@ glm::dvec3 RayTracer::traceRay(ray &r, const glm::dvec3 &thresh, int depth,
         ray r_refraction(pos, t_refract, glm::dvec3(1, 1, 1), ray::REFRACTION);
         // ray r_refraction(pos, t_refract, glm::dvec3(1, 1, 1), ray::REFRACTION);
         // TODO: scale by distance
-        // isect iRefract; 
-        // double d = 1.0;
-        // if (scene->intersect(r_refraction, iRefract)) {
-        //   d = glm::distance(iRefract.getT(), i.getT());
-        // }
+        isect iRefract; 
+        double d = 1.0;
+        if (scene->intersect(r_refraction, iRefract)) {
+          double d = iRefract.getT();
+        }
         // TODO: confirm if m.kt(i) goes here
-        // colorC += traceRay(r_refraction, thresh, depth - 1, t) * m.kt(i);
+        // colorC += traceRay(r_refraction, thresh, depth - 1, t) * pow(m.kt(i), glm::dvec3(d));
         colorC += traceRay(r_refraction, thresh, depth - 1, t);
-      } 
-      else { // the square root is imaginary so we have total internal reflection
+      } else { // the square root is imaginary so we have total internal reflection
         // TODO: since the reference does not have this, confirm if it's better w/o this.
         glm::dvec3 r_t_reflection = glm::normalize(-r.getDirection() + 2 * glm::dot(r.getDirection(), N) * N);
-        ray t_i_reflection(pos, r_t_reflection, glm::dvec3(1, 1, 1),
-          ray::REFLECTION);
+        ray t_i_reflection(pos, r_t_reflection, glm::dvec3(1, 1, 1), ray::REFLECTION);
+        isect iReflect; 
+        double d = 1.0;
+        if (scene->intersect(t_i_reflection, iReflect)) {
+          double d = iReflect.getT();
+        }
         // TODO: confirm if we multiply by m.kr(i) or not here
-        colorC += m.kr(i) * traceRay(t_i_reflection, thresh, depth - 1, t);
+        // colorC += m.kr(i) * traceRay(t_i_reflection, thresh, depth - 1, t);
+        // changed:
+        colorC += m.kr(i) * traceRay(t_i_reflection, thresh, depth - 1, t) * pow(m.kt(i), glm::dvec3(d));
       }   
     }
     return colorC;
