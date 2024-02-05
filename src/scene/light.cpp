@@ -16,34 +16,28 @@ glm::dvec3 DirectionalLight::shadowAttenuation(const ray &r,
                                                const glm::dvec3 &p) const {
   // YOUR CODE HERE:
   // You should implement shadow-handling code here.
-  	
-	// ray new_ray(r);
-	// isect i;
-	// // check if we have intersection
-	// if (getScene()->intersect (new_ray, i)) {
-	// 	// now we check if the distance point to light is less than distance point to intersection
-	// 	glm::dvec3 point = new_ray.at(i.getT());
-	// 		// check if the object is translucent
-	// 	if (i.getMaterial().Trans()) {
-	// 		// shoot new ray 
-	// 		ray r_trans(new_ray);
-	// 		r_trans.setPosition(point);
-	// 		// second intersection
-	// 		isect iItranlucid;
-	// 		// confirm we have second intersection
-	// 		if (getScene()->intersect(r_trans, iItranlucid)) {
-	// 			// TODO: confirm if we get the distance like this
-	// 			// double d = glm::distance(iItranlucid.getT(), i.getT());
-	// 			// changed:
-	// 			// double d = glm::distance(point, p);
-	// 			double d = iItranlucid.getT();
-	// 			glm::dvec3 multiply = glm::pow (i.getMaterial().kt(i), glm::dvec3(d, d, d));
-	// 			r_trans.setPosition(r_trans.at(iItranlucid));
-	// 			return multiply * shadowAttenuation(r_trans, r_trans.at(iItranlucid));
-	// 		}
-	// 	}
-	// 	return glm::dvec3(0, 0, 0);
-	// }
+	ray new_ray = r;
+	isect i;
+	// check if we have intersection
+	if (getScene()->intersect (new_ray, i)) {
+		glm::dvec3 point = new_ray.at(i.getT());
+		// check if the object is translucent
+		if (i.getMaterial().Trans()) {
+			// shoot new ray 
+			ray r_trans(new_ray);
+			r_trans.setPosition(point);
+			// second intersection
+			isect iItranlucid;
+			// confirm we have second intersection
+			if (getScene()->intersect(r_trans, iItranlucid)) {
+				double d = i.getT();
+				glm::dvec3 multiply = glm::pow (i.getMaterial().kt(i), glm::dvec3(d, d, d));
+				r_trans.setPosition(r_trans.at(iItranlucid));
+				return multiply * shadowAttenuation(r_trans, r_trans.at(iItranlucid));
+			}
+		}
+		return glm::dvec3(0, 0, 0);
+	}
 
 	return glm::dvec3(1,1,1);
 	
@@ -115,6 +109,7 @@ glm::dvec3 PointLight::shadowAttenuation(const ray &r,
 					return multiply * shadowAttenuation(r_trans, r_trans.at(iItranlucid));
 				} 
 			}
+			return glm::dvec3(0, 0, 0);
 		}
 	}
 
