@@ -157,7 +157,7 @@ bool TrimeshFace::intersectLocal(ray &r, isect &i) const {
     //    face. Create a new material by copying the parent's material, set the
     //    diffuse color of this material to the interpolated color, and then 
     //    assign this material to the intersection.
-    if (!(parent->vertColors).empty()) {
+    if (!parent->vertColors.empty()) {
       glm::dvec3 c1 = m1 * parent->vertColors[ids[0]];
       glm::dvec3 c2 = m2 * parent->vertColors[ids[1]];
       glm::dvec3 c3 = m3 * parent->vertColors[ids[2]];
