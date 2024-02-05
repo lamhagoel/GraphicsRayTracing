@@ -175,8 +175,16 @@ glm::dvec3 RayTracer::traceRay(ray &r, const glm::dvec3 &thresh, int depth,
         glm::dvec3 t_refract = (eta * cos_i - cos_t) * N - (eta * V);
         ray r_refraction(pos, t_refract, glm::dvec3(1, 1, 1),
           ray::REFRACTION);
+	// TODO: scale by distance
+        isect iRefract;
+        double d = 1.0;
+        if (scene->intersect(r_refraction, iRefract)) {
+          d = glm::distance(iRefract.getT(), i.getT());
+        }
         // TODO: confirm if m.kt(i) goes here
-        colorC += traceRay(r_refraction, thresh, depth - 1, t) * m.kt(i);
+        colorC += traceRay(r_refraction, thresh, depth - 1, t) * glm::pow(m.kt(i), d);
+        // TODO: confirm if m.kt(i) goes here
+        //colorC += traceRay(r_refraction, thresh, depth - 1, t) * m.kt(i);
       } else { // the square root is imaginary so we have total internal reflection
         // TODO: since the reference does not have this, confirm if it's better w/o this.
         glm::dvec3 r_t_reflection = glm::normalize(r.getDirection() - 2 * glm::dot(N, r.getDirection()) * N);
