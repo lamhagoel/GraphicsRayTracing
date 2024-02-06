@@ -9,6 +9,7 @@ extern TraceUI *traceUI;
 #include <iostream>
 #include <algorithm>
 #include <iostream>
+
 using namespace std;
 extern bool debugMode;
 
@@ -61,7 +62,7 @@ glm::dvec3 Material::shade(Scene *scene, const ray &r, const isect &i) const {
     glm::dvec3 Lambertian = pLight->getDirection(r.at(i.getT()));
     // dot product berween L and N, i.getN() returns the normal of the intersection point
     // scalar
-    double Lambertian_N = abs(glm::dot(Lambertian, i.getN()));
+    double Lambertian_N = max(0.0, glm::dot(Lambertian, i.getN()));
     glm::dvec3 IDiffuse = pLight->getColor() * (kd(i)*Lambertian_N);
     // specular coefficient term double shininess(const isect &i) const
     // reflection angle: r = 2(l ⋅n)n − l
