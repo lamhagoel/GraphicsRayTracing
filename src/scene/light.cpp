@@ -69,11 +69,9 @@ double PointLight::distanceAttenuation(const glm::dvec3 &P) const {
   // float linearTerm;    // b
   // float quadraticTerm; // c
   double d = glm::length(position - P);
-  double result;
-  if (1.0/(constantTerm + linearTerm * d + quadraticTerm * pow(d, 2.0)) > 1) {
+  double result = 1.0/(constantTerm + linearTerm * d + quadraticTerm * pow(d, 2.0));
+  if (result > 1) {
     result = 1.0;
-  } else {
-    result =  1.0/(constantTerm + linearTerm * d + quadraticTerm * pow(d, 2.0));
   }
   return result;
 }
