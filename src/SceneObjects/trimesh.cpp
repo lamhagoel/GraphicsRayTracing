@@ -128,7 +128,6 @@ bool TrimeshFace::intersectLocal(ray &r, isect &i) const {
     double m3 = 1.0 - m1 - m2;
 
     i.setBary(m1, m2, m3);
-    i.setUVCoordinates(glm::dvec2(m1, m2));
 
     // TODO: Phong interpolation, confirm if we need to set the normals like this
       // I think we can set the normal by check this boolean this->parent->vertNorms, bc how the json is read
@@ -141,23 +140,22 @@ bool TrimeshFace::intersectLocal(ray &r, isect &i) const {
     } else {
       i.setN(normal);
     }
-
-    // TODO: I think is milestone 2
     //  - If the parent mesh has non-empty `uvCoords`, barycentrically interpolate
     //      the UV coordinates of the three vertices of the face, then assign it to
     //      the intersection using i.setUVCoordinates().
-    // if (!(this->parent->uvCoords).empty()) {
-
-    // } else {
-      
-    // }
-
+    // TODO: confirm if this is correct, weird
+    if (!(this->parent->uvCoords).empty()) {
+      glm::dvec2 uv1 = m1 * parent->uvCoords[ids[0]];
+      glm::dvec2 uv2 = m2 * parent->uvCoords[ids[1]];
+      glm::dvec2 uv3 = m3 * parent->uvCoords[ids[2]];
+      glm::dvec2 uvcoordinates = glm::normalize(uv1 + uv2 + uv3);
+      i.setUVCoordinates(uvcoordinates);
     // - Otherwise, if the parent mesh has non-empty `vertexColors`,
     //    barycentrically interpolate the colors from the three vertices of the
     //    face. Create a new material by copying the parent's material, set the
     //    diffuse color of this material to the interpolated color, and then 
     //    assign this material to the intersection.
-    if (!parent->vertColors.empty()) {
+    } else if (!parent->vertColors.empty()) {
       glm::dvec3 c1 = m1 * parent->vertColors[ids[0]];
       glm::dvec3 c2 = m2 * parent->vertColors[ids[1]];
       glm::dvec3 c3 = m3 * parent->vertColors[ids[2]];
