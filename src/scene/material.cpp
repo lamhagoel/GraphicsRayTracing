@@ -119,24 +119,21 @@ glm::dvec3 TextureMap::getMappedValue(const glm::dvec2 &coord) const {
   // of the values.
   // here the coordinate is assumed to be within the parametrization space:
   // normalized window coordinates (x,y)
+  double u = coord[0] * double(width) - coord[0];
+  double v = coord[1] * double(height) - coord[1];
 
-  double u = coord[0] * double(getWidth()) - coord[0];
-  double v = coord[1] * double(getHeight()) - coord[1];
-
+  // floor in case they are not integers
   double u1 = floor(u);
   double v1 = floor(v);
   double u2 = u1 + 1;
   double v2 = v1 + 1;
   double alpha = u2 - u;
   double betha = u - u1;
-
   glm::dvec3 a = getPixelAt(u1, v1);
   glm::dvec3 b = getPixelAt(u2, v1);
   glm::dvec3 c = getPixelAt(u2, v2);
   glm::dvec3 d = getPixelAt(u1, v2);
-  
   glm::dvec3 mappedValue = (v2 - v) * (alpha * a + betha * b) + (v - v1) * (alpha * d + betha * c);
-  
   return mappedValue;
 }
 
@@ -146,16 +143,14 @@ glm::dvec3 TextureMap::getPixelAt(int x, int y) const {
   // In order to add texture mapping support to the
   // raytracer, you need to implement this function.
   // get pixel
-
-  // if out of the square
-  if (x > getWidth() || y > getHeigh() || x < 0 || y < 0) {
+  // if out of range, background
+  if (x > width || y > height || x < 0 || y < 0) {
     return glm::dvec3(0, 0, 0);
   }
   // TODO: confirm if it works like this, it should
-  unsigned char *pixel = buffer.data() + (x + y * getWidth()) * 3;
-  glm::dvec3 pixel_vector = glm::dvec3((double)pixel[0] / 255.0, (double)pixel[1] / 255.0,
-                    (double)pixel[2] / 255.0);
-  
+  double i = (x + y * width) * 3;
+  glm::dvec3 pixel_vector = glm::dvec3((double)data[0 + i] / 255.0, (double)data[1 + i] / 255.0,
+                    (double)data[2 + i] / 255.0);
   return pixel_vector;
 }
 
