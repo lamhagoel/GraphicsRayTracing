@@ -20,6 +20,10 @@ glm::dvec3 DirectionalLight::shadowAttenuation(const ray &r,
 	isect i;
 	// check if we have intersection
 	if (getScene()->intersect (new_ray, i)) {
+		double test = i.getT();
+		if (test < 0.000001) {
+			return glm::dvec3(1,1,1);
+		}
 		glm::dvec3 point = new_ray.at(i.getT());
 		// check if the object is translucent
 		if (i.getMaterial().Trans()) {
@@ -89,6 +93,9 @@ glm::dvec3 PointLight::shadowAttenuation(const ray &r,
 	isect i;
 	// check if we have intersection
 	if (getScene()->intersect (new_ray, i)) {
+		if (i.getT() < RAY_EPSILON) {
+			return glm::dvec3(1,1,1);
+		}
 		// now we check if the distance point to light is less than distance point to intersection
 		glm::dvec3 point = new_ray.at(i.getT());
 		double d1 = glm::distance(p, point);
