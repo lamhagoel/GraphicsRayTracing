@@ -50,6 +50,13 @@ glm::dvec3 Material::shade(Scene *scene, const ray &r, const isect &i) const {
   // ke + ka*ia
   glm::dvec3 result =  ke(i) + ka(i)*(scene->ambient());
 
+  // check if we are entering or leaving an object and fix normal accordingly 
+  glm::dvec3 n_fix = i.getN();
+  if (glm::dot(n_fix, -r.getDirection()) < 0) {
+    n_fix = - n_fix;
+  }
+  glm::dvec3 position = r.at(i) + RAY_EPSILON * n_fix;
+  
   // summation
   for ( const auto& pLight : scene->getAllLights() )
   { 
@@ -59,11 +66,14 @@ glm::dvec3 Material::shade(Scene *scene, const ray &r, const isect &i) const {
     // where p is the position and d is the direction and t the point on plane
     // getDirection(P) normalized(position of light - vector)
     // glm::normalize(position - P)
-    glm::dvec3 Lambertian = pLight->getDirection(r.at(i.getT()) + i.getN() * 0.000001);
-    // glm::dvec3 Lambertian = pLight->getDirection(r.at(i.getT()));
+    // cambio
+    // glm::dvec3 Lambertian = pLight->getDirection(r.at(i.getT()) + i.getN() * 0.000001);
+    glm::dvec3 Lambertian = pLight->getDirection(position);
     // dot product berween L and N, i.getN() returns the normal of the intersection point
     // scalar
-    double Lambertian_N = i.getMaterial().Trans() ? abs(glm::dot(Lambertian, i.getN())) : max(0.0, glm::dot(Lambertian, i.getN()));
+    double Lambertian_N = i.getMaterial().Trans() ? abs(glm::dot(Lambertian, n_fix)) : max(0.0, glm::dot(Lambertian, n_fix));
+    // double Lambertian_N = max(0.0, glm::dot(Lambertian, i.getN()));
+    // double Lambertian_N = abs(glm::dot(Lambertian, i.getN()));
     glm::dvec3 IDiffuse = pLight->getColor() * (kd(i)*Lambertian_N);
     // specular coefficient term double shininess(const isect &i) const
     // reflection angle: r = 2(l ⋅n)n − l
@@ -78,15 +88,19 @@ glm::dvec3 Material::shade(Scene *scene, const ray &r, const isect &i) const {
     // changed:
     // glm::dvec3 V = glm::normalize(scene->getCamera().getEye() - r.at(i.getT()));
     glm::dvec3 V = -r.getDirection();
-    // changed
-    // double V_dot_R = pow(max(0.0, glm::dot(R, V)), shininess(i));
     double V_dot_R = pow(max(0.0, glm::dot(R, V)), this->shininess(i));
-
+    // if (V_dot_R < RAY_EPSILON) {
+    //   continue;
+    // }
     glm::dvec3 ISpecular = pLight->getColor() * ks(i)*V_dot_R;
-    ray rShadow(r.at(i.getT()), pLight->getDirection(r.at(i.getT())), glm::dvec3(1,1,1), ray::SHADOW);	
+    // cambio
+    // ray rShadow(r.at(i.getT()), pLight->getDirection(r.at(i.getT())), glm::dvec3(1,1,1), ray::SHADOW);	
+    ray rShadow(position, pLight->getDirection(position), glm::dvec3(1,1,1), ray::SHADOW);	
     // TODO: include light attenuation
     // glm::dvec3 I_attenuation = pLight->distanceAttenuation(r.at(i.getT()))*pLight->shadowAttenuation(r, r.at(i.getT()));
-    glm::dvec3 I_attenuation = min(1.0, pLight->distanceAttenuation(r.at(i.getT())))*pLight->shadowAttenuation(rShadow, r.at(i.getT()));
+    // glm::dvec3 shadow_attenuation = pLight->shadowAttenuation(rShadow, r.at(i.getT()));
+    glm::dvec3 shadow_attenuation = pLight->shadowAttenuation(rShadow, position);
+    glm::dvec3 I_attenuation = min(1.0, pLight->distanceAttenuation(r.at(i.getT())))*shadow_attenuation;
     result += I_attenuation * (IDiffuse + ISpecular);
   }
 
