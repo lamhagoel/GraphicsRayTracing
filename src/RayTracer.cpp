@@ -388,6 +388,8 @@ void RayTracer::traceImage(int w, int h) {
 int RayTracer::aaImage() {
   // YOUR CODE HERE
   // FIXME: Implement Anti-aliasing here
+  // YOUR CODE HERE
+  // FIXME: Implement Anti-aliasing here
   //
 
   // cout<<"aaImage: "<<w<<" "<<h<<" "<<samples<<" "<<buffer.size()<<"\n";
@@ -417,25 +419,26 @@ int RayTracer::aaImage() {
 
   // bool bufferzeros = std::all_of(buffer.begin(), buffer.end(), [](int i) { return i==0; });
 
-  for (int j = 0; j < h; j++)
-  {
+  for (int j = 0; j < h; j++) {
     for (int i = 0; i < w; i++) {
       unsigned char *pixel = tempBuffer.data() + (i + j * w) * 3;
-      long int sum0 = 0, sum1 = 0, sum2 = 0; // TODO: Can we change this to a vector instead?
+      // long int sum0 = 0, sum1 = 0, sum2 = 0; // TODO: Can we change this to a vector instead?
+      glm::dvec3 sum = glm::dvec3(0, 0, 0);
       for (int l = 0; l < samples; l++) {
         for (int k = 0; k < samples; k++) {
           unsigned char *bufferLoc = buf + (j*w*samples*samples + l*w*samples + i*samples + k) * 3;
           // cout<<(j*w*samples*samples + l*w*samples + i*samples + k)<<"\n";
           // cout<<((i*samples+k) + (j*samples+l) * w)<<"\n";
           // cout<<((i+j*w)*samples*samples + (k+l*samples))<<"\n"; // TODO: Check which is the correct expression - basically denotes how many pixels before this
-          sum0 += (int)bufferLoc[0];
-          sum1 += (int)bufferLoc[1];
-          sum2 += (int)bufferLoc[2];
+          sum += glm::dvec3((int)bufferLoc[0], (int)bufferLoc[1], (int)bufferLoc[2]);
+          // sum0 += (int)bufferLoc[0];
+          // sum1 += (int)bufferLoc[1];
+          // sum2 += (int)bufferLoc[2];
         }
       }
-      pixel[0] = (int)(sum0/overSamplingFactor);
-      pixel[1] = (int)(sum1/overSamplingFactor);
-      pixel[2] = (int)(sum2/overSamplingFactor);
+      pixel[0] = (int)(sum.x/overSamplingFactor);
+      pixel[1] = (int)(sum.y/overSamplingFactor);
+      pixel[2] = (int)(sum.z/overSamplingFactor);
     }
   }
 
