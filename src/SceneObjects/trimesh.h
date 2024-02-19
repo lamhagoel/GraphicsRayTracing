@@ -4,8 +4,6 @@
 #include <list>
 #include <memory>
 #include <vector>
-// #include <iostream>
-// #include <stdio.h>
 
 #include "../scene/kdTree.h"
 #include "../scene/material.h"
@@ -146,8 +144,6 @@ public:
   bool hasBoundingBoxCapability() const { return true; }
 
   BoundingBox ComputeLocalBoundingBox() {
-    // std::cout<<"trimesh.h TrimeshFace::ComputeLocalBoundingBox\n";
-
     BoundingBox localbounds;
     localbounds.setMax(
         glm::max(parent->vertices[ids[0]], parent->vertices[ids[1]]));

@@ -1,28 +1,27 @@
 #include <glm/vec3.hpp>
 #include <vector>
-#include <iostream>
-#include <stdio.h>
 
 #include "BVH.h"
 #include "scene.h"
 #include "../SceneObjects/trimesh.h"
 
 void BVH::buildBVH() {
-    // BoundingBox sceneBox = scene->getBoundingBox();
-    // std::cout<<"BVH.cpp BVH::buildBVH start\n";
     std::vector<Geometry*> sceneObjects;
 
-    // TODO: Add objects - sort beforehand??
+    // Add objects - sort beforehand??
     // Actually don't sort yet, longest axis can keep changing for each split,
     // changing the sorting order. Sort on the go.
     // Can we do partial sorting? Maybe?
 
     for (auto objIter = scene->beginObjects(); objIter < scene->endObjects(); objIter++) {
-        Geometry* obj = *objIter; // TODO: Check if this is the correct way.
+        Geometry* obj = *objIter;
         if (typeid(*obj) == typeid(Trimesh)) {
             // It's a trimesh. We treat each trimesh face as individual object.
             Trimesh* trimeshObj = (Trimesh*) obj;
             for (auto faceIter = trimeshObj->beginFaces(); faceIter < trimeshObj->endFaces(); faceIter++) {
+                // For some reason, TrimeshFace wasn't a Geometry subclass in starter code. It also never had its ComputeBoundingBox
+                // method called. So, we need to make sure to explicitly compute the bounding box for TrimeshFace. It's already automatically
+                // called by Scene::add for Trimesh and other objects.
                 (*faceIter)->ComputeBoundingBox();
                 sceneObjects.push_back((*faceIter));
             }
@@ -35,9 +34,7 @@ void BVH::buildBVH() {
 
     root = new BVHNode(sceneObjects);
 
-    // std::cout<<"BVH.cpp BVH::buildBVH end\n";
-
-    // TODO: Split till leaves now. Recursive? - We let the constructor do this itself.
+    // Split till leaves now. Recursive - We let the constructor do this itself.
 }
 
 bool BVH::intersect(ray &r, isect &i) const {
@@ -59,15 +56,10 @@ void BVHNode::splitNode() { // For top-down BVH construction
     // TODO: should we also simplify in case of 2 objects to avoid the overhead of decisions?
     // We wanna always simply split for 2 objects
 
-    // std::cout<<"BVH.cpp BVHNode::splitNode start\n";
-    // std::cout<<"BVH.cpp BVHNode::splitNode "<<typeid(*(this->objects[0])).name()<<"\n";
     int numObjects = objects.size();
-
-    // std::cout<<numObjects<<"\n";
 
     if (numObjects == 1) {
         this->boundingBox = BoundingBox();
-        // std::cout<<"BVH.cpp BVHNode::splitNode "<<objects[0]->getBoundingBox().isEmpty()<<" Empty\n";
         (this->boundingBox).merge(objects[0]->getBoundingBox());
         return;
     }
@@ -98,7 +90,7 @@ void BVHNode::splitNode() { // For top-down BVH construction
                             }
                         );
 
-    // Now, the center of bounding box for object at index s/2 is greater than the centers of all bounding box of objects
+    // Now, the center of bounding box for object at index numObjects/2 is greater than the centers of all bounding box of objects
     // to its left in the list. (and same for the other direction) in its value on the argMax axis.
 
     std::vector<Geometry*> firstHalfObjects(objects.begin(), objects.begin() + numObjects/2);
@@ -114,25 +106,16 @@ void BVHNode::splitNode() { // For top-down BVH construction
     (this->boundingBox).merge(first->getBoundingBox());
     (this->boundingBox).merge(second->getBoundingBox());
 
-    // std::cout<<"BVH.cpp BVHNode::splitNode end\n";
     return;
 }
 
 bool BVHNode::intersect(ray &r, isect &i) const {
-    // std::cout<<"BVH.cpp BVHNode::intersect "<<"Here1\n";
     double tmin = 0.0;
     double tmax = 0.0;
     bool have_one = false;
 
-
-    // std::cout<<"BVH.cpp BVHNode::intersect "<<this->objects.size()<<"\n";
-    // std::cout<<"BVH.cpp BVHNode::intersect "<<typeid(*(this->objects[0])).name()<<"\n";
-    // std::cout<<"BVH.cpp BVHNode::intersect "<<objects[0]->getBoundingBox().isEmpty()<<" Empty\n";
-
     bool intersect = boundingBox.intersect(r, tmin, tmax);
-    // std::cout<<"BVH.cpp BVHNode::intersect "<<intersect<<"\n";
     if (intersect) {
-        // std::cout<<"BVH.cpp BVHNode::intersect "<<"Here\n";
         if (children.empty()) {
             // We are at the leaf node. Do actual object intersection here
             for (const auto &obj : objects) {

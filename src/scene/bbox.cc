@@ -1,6 +1,3 @@
-// #include <iostream>
-// #include <stdio.h>
-
 #include "bbox.h"
 #include "ray.h"
 
@@ -31,7 +28,6 @@ bool BoundingBox::intersect(const ray &r, double &tMin, double &tMax) const {
   /*
    * Kay/Kajiya algorithm.
    */
-
   glm::dvec3 R0 = r.getPosition();
   glm::dvec3 Rd = r.getDirection();
   tMin = -1.0e308; // 1.0e308 is close to infinity... close enough
@@ -40,13 +36,10 @@ bool BoundingBox::intersect(const ray &r, double &tMin, double &tMax) const {
   double ttemp;
 
   for (int currentaxis = 0; currentaxis < 3; currentaxis++) {
-    // std::cout<<"Bbox.cc BoundingBox::intersect "<<currentaxis<<"\n";
     double vd = Rd[currentaxis];
     // if the ray is parallel to the face's plane (=0.0)
     if (vd == 0.0)
       continue;
-    // std::cout<<"Bbox.cc BoundingBox::intersect "<<"Here2\n";
-    // std::cout<<"Bbox.cc BoundingBox::intersect "<<bEmpty<<"\n";
     double v1 = bmin[currentaxis] - R0[currentaxis];
     double v2 = bmax[currentaxis] - R0[currentaxis];
     // two slab intersections

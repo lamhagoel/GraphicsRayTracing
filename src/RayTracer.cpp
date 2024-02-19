@@ -79,7 +79,6 @@ glm::dvec3 RayTracer::tracePixel(int i, int j) {
   double x = double(i) / double(buffer_width);
   double y = double(j) / double(buffer_height);
 
-  // cout<<"TracePixel: "<<buffer_width<<" "<<buffer_height<<"\n";
   // calculates the address of the pixel in the buffer, *3 bc there are 3 colors?
   unsigned char *pixel = buffer.data() + (i + j * buffer_width) * 3;
   col = trace(x, y);
@@ -353,7 +352,6 @@ void RayTracer::traceSetup(int w, int h) {
  */
 void RayTracer::traceImage(int w, int h) {
   // Always call traceSetup before rendering anything.
-  // cout <<"TraceImage: "<<w<<" "<<h<<" "<<samples<<"\n";
   if(traceUI->aaSwitch()) {
     samples = traceUI ->getSuperSamples();
     h = h * samples;
@@ -393,8 +391,6 @@ int RayTracer::aaImage() {
   // FIXME: Implement Anti-aliasing here
   //
 
-  // cout<<"aaImage: "<<w<<" "<<h<<" "<<samples<<" "<<buffer.size()<<"\n";
-
   // Nothing to do if we weren't oversampling
   if (samples<=1) {
     return 0;
@@ -428,9 +424,6 @@ int RayTracer::aaImage() {
       for (int l = 0; l < samples; l++) {
         for (int k = 0; k < samples; k++) {
           unsigned char *bufferLoc = buf + (j*w*samples*samples + l*w*samples + i*samples + k) * 3;
-          // cout<<(j*w*samples*samples + l*w*samples + i*samples + k)<<"\n";
-          // cout<<((i*samples+k) + (j*samples+l) * w)<<"\n";
-          // cout<<((i+j*w)*samples*samples + (k+l*samples))<<"\n"; // TODO: Check which is the correct expression - basically denotes how many pixels before this
           sum += glm::dvec3((int)bufferLoc[0], (int)bufferLoc[1], (int)bufferLoc[2]);
           // sum0 += (int)bufferLoc[0];
           // sum1 += (int)bufferLoc[1];
@@ -445,8 +438,6 @@ int RayTracer::aaImage() {
 
   // bool tempBufferZeros = std::all_of(tempBuffer.begin(), tempBuffer.end(), [](int i) { return i==0; });
 
-  // cout<<"Buffer: "<<bufferzeros<<" TempBuffer: "<<tempBufferZeros<<"\n";
-
   size_t newBufferSize = imageSize;;
   if (newBufferSize != buffer.size()) {
     bufferSize = newBufferSize;
@@ -455,8 +446,6 @@ int RayTracer::aaImage() {
   buffer_width = w;
   buffer_height = h;
   buffer.assign(tempBuffer.begin(), tempBuffer.end());  
-
-  // cout<<buffer.size()<<"\n";
 
   // std::fill(buffer.begin(), buffer.end(), 0);
   // m_bBufferReady = true;

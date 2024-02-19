@@ -16,8 +16,7 @@ class BVHNode {
         BVHNode(std::vector<Geometry*> objects) {
             // this->boundingBox = bBox;
             // this->boundsInitialized = false;
-            // We usually make objects through BVH::buildBVH, where we'll populate the bounding box
-            // If it is not already populated, the getter creates it on the go
+            // SplitNode also populates the boundingBox
             this->objects = objects;
             splitNode();
         }
