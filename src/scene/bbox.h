@@ -17,7 +17,7 @@ public:
 
   glm::dvec3 getMin() const { return bmin; }
   glm::dvec3 getMax() const { return bmax; }
-  bool isEmpty() { return bEmpty; }
+  bool isEmpty() const { return bEmpty; }
   void setEmpty() { bEmpty = true; }
 
   void setMin(glm::dvec3 bMin) {
@@ -44,6 +44,8 @@ public:
       bEmpty = false;
     }
   }
+
+  glm::dvec3 getCenter() const { return 0.5 * (bmax + bmin); }
 
   // Does this bounding box intersect the target?
   bool intersects(const BoundingBox &target) const;

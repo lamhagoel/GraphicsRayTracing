@@ -32,7 +32,7 @@ bool Trimesh::addFace(int a, int b, int c) {
   if (a >= vcnt || b >= vcnt || c >= vcnt)
     return false;
 
-  TrimeshFace *newFace = new TrimeshFace(this, a, b, c);
+  TrimeshFace *newFace = new TrimeshFace(this, a, b, c, scene, &material);
   if (!newFace->degen)
     faces.push_back(newFace);
   else

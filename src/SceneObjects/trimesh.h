@@ -4,6 +4,8 @@
 #include <list>
 #include <memory>
 #include <vector>
+// #include <iostream>
+// #include <stdio.h>
 
 #include "../scene/kdTree.h"
 #include "../scene/material.h"
@@ -72,6 +74,10 @@ public:
     return localbounds;
   }
 
+  auto beginFaces() const { return faces.cbegin(); }
+  auto endFaces() const { return faces.cend(); }
+  const auto &getAllFaces() const { return faces; }
+
 protected:
   void glDrawLocal(int quality, bool actualMaterials,
                    bool actualTextures) const;
@@ -90,7 +96,7 @@ the SceneObject hierarchy.
 
 Access to materials and transform are provided by referencing the parent
 Trimesh object. */
-class TrimeshFace {
+class TrimeshFace : public SceneObject {
   Trimesh *parent;
   int ids[3];
   glm::dvec3 normal;
@@ -98,7 +104,7 @@ class TrimeshFace {
   BoundingBox bounds;
 
 public:
-  TrimeshFace(Trimesh *parent, int a, int b, int c) {
+  TrimeshFace(Trimesh *parent, int a, int b, int c, Scene *scene, Material *mat) : SceneObject(scene, mat) {
     this->parent = parent;
     ids[0] = a;
     ids[1] = b;
@@ -140,6 +146,8 @@ public:
   bool hasBoundingBoxCapability() const { return true; }
 
   BoundingBox ComputeLocalBoundingBox() {
+    // std::cout<<"trimesh.h TrimeshFace::ComputeLocalBoundingBox\n";
+
     BoundingBox localbounds;
     localbounds.setMax(
         glm::max(parent->vertices[ids[0]], parent->vertices[ids[1]]));

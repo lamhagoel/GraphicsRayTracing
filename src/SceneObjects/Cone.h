@@ -1,6 +1,9 @@
 #ifndef __CONE_H__
 #define __CONE_H__
 
+
+// #include <iostream>
+// #include <stdio.h>
 #include "../scene/scene.h"
 
 class Cone : public SceneObject {
@@ -41,6 +44,7 @@ public:
   virtual bool hasBoundingBoxCapability() const { return true; }
 
   virtual BoundingBox ComputeLocalBoundingBox() {
+    // std::cout<<"Cone.h ComputeLocalBoundingBox\n";
     BoundingBox localbounds;
     double biggest_radius = (b_radius > t_radius) ? (b_radius) : (t_radius);
 

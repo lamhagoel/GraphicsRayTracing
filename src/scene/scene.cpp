@@ -4,6 +4,7 @@
 #include "kdTree.h"
 #include "light.h"
 #include "scene.h"
+#include "BVH.h"
 #include <glm/gtx/extended_min_max.hpp>
 #include <glm/gtx/io.hpp>
 #include <iostream>
@@ -89,6 +90,8 @@ void Geometry::ComputeBoundingBox() {
 
   bounds.setMax(glm::dvec3(newMax));
   bounds.setMin(glm::dvec3(newMin));
+
+  // cout<<"scene.cpp Geometry::ComputeBoundingBox Bounds set\n";
 }
 
 Scene::Scene() { ambientIntensity = glm::dvec3(0, 0, 0); }
@@ -108,29 +111,39 @@ void Scene::add(Geometry *obj) {
 
 void Scene::add(Light *light) { lights.emplace_back(light); }
 
+void Scene::buildBVH() {
+  bvhTree = new BVH(this);
+  return;
+}
+
 
 // Get any intersection with an object.  Return information about the
 // intersection through the reference parameter.
 bool Scene::intersect(ray &r, isect &i) const {
-  double tmin = 0.0;
-  double tmax = 0.0;
-  bool have_one = false;
-  for (const auto &obj : objects) {
-    isect cur;
-    if (obj->intersect(r, cur)) {
-      if (!have_one || (cur.getT() < i.getT())) {
-        i = cur;
-        have_one = true;
-      }
-    }
-  }
-  if (!have_one)
-    i.setT(1000.0);
-  // if debugging,
-  if (TraceUI::m_debug) {
-    addToIntersectCache(std::make_pair(new ray(r), new isect(i)));
-  }
+  isect cur;
+  bool have_one = bvhTree->intersect(r, cur);
+  i = cur;
   return have_one;
+
+  // double tmin = 0.0;
+  // double tmax = 0.0;
+  // bool have_one = false;
+  // for (const auto &obj : objects) {
+  //   isect cur;
+  //   if (obj->intersect(r, cur)) {
+  //     if (!have_one || (cur.getT() < i.getT())) {
+  //       i = cur;
+  //       have_one = true;
+  //     }
+  //   }
+  // }
+  // if (!have_one)
+  //   i.setT(1000.0);
+  // // if debugging,
+  // if (TraceUI::m_debug) {
+  //   addToIntersectCache(std::make_pair(new ray(r), new isect(i)));
+  // }
+  // return have_one;
 }
 
 TextureMap *Scene::getTexture(string name) {

@@ -353,7 +353,7 @@ void RayTracer::traceSetup(int w, int h) {
  */
 void RayTracer::traceImage(int w, int h) {
   // Always call traceSetup before rendering anything.
-  cout <<"TraceImage: "<<w<<" "<<h<<" "<<samples<<"\n";
+  // cout <<"TraceImage: "<<w<<" "<<h<<" "<<samples<<"\n";
   if(traceUI->aaSwitch()) {
     samples = traceUI ->getSuperSamples();
     h = h * samples;
@@ -361,6 +361,7 @@ void RayTracer::traceImage(int w, int h) {
   }
   //TODO: the value of samples changes after this (incorrectly if the anti-aliasing is not selected). Tried fixing it, verify.
   traceSetup(w, h);
+  scene->buildBVH();
   for (int i = 0; i < w; i++)
   {
     for (int j = 0; j < h; j++) {

@@ -30,6 +30,7 @@
 
 using std::unique_ptr;
 
+class BVH;
 class Light;
 class Scene;
 
@@ -199,8 +200,10 @@ public:
 
   const BoundingBox &bounds() const { return sceneBounds; }
 
+  void buildBVH();
 
 private:
+  BVH *bvhTree;
   /* Do not try to access these members directly. If you need to iterate
      over e.g. lights, use the following loop:
 
