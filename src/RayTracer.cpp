@@ -38,7 +38,7 @@ bool debugMode = false;
 // Constant to stop the supersampling recursion
 static const double supersampling_recursion = 4;
 
-static const bool doJitterAntiAliasing = true;
+static const bool doJitterAntiAliasing = false;
 
 // Early termination parameters
 static const glm::dvec3 reflection_treshold = glm::dvec3(0.0001, 0.0001, 0.0001);
