@@ -22,7 +22,7 @@ void BVH::buildBVH() {
                 // For some reason, TrimeshFace wasn't a Geometry subclass in starter code. It also never had its ComputeBoundingBox
                 // method called. So, we need to make sure to explicitly compute the bounding box for TrimeshFace. It's already automatically
                 // called by Scene::add for Trimesh and other objects.
-                (*faceIter)->ComputeBoundingBox();
+                // (*faceIter)->ComputeBoundingBox();
                 sceneObjects.push_back((*faceIter));
             }
         }

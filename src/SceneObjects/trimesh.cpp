@@ -72,11 +72,6 @@ bool Trimesh::intersectLocal(ray &r, isect &i) const {
   return have_one;
 }
 
-bool TrimeshFace::intersect(ray &r, isect &i) const {
-  return intersectLocal(r, i);
-}
-
-
 // Intersect ray r with the triangle abc.  If it hits returns true,
 // and put the parameter in t and the barycentric coordinates of the
 // intersection in u (alpha) and v (beta).

@@ -104,6 +104,7 @@ class TrimeshFace : public SceneObject {
 public:
   TrimeshFace(Trimesh *parent, int a, int b, int c, Scene *scene, Material *mat) : SceneObject(scene, mat) {
     this->parent = parent;
+    this->transform = parent->transform;
     ids[0] = a;
     ids[1] = b;
     ids[2] = c;
@@ -128,6 +129,7 @@ public:
     }
     localbounds = ComputeLocalBoundingBox();
     bounds = localbounds;
+    ComputeBoundingBox();
   }
 
   BoundingBox localbounds;
@@ -137,7 +139,6 @@ public:
 
   glm::dvec3 getNormal() { return normal; }
 
-  bool intersect(ray &r, isect &i) const;
   bool intersectLocal(ray &r, isect &i) const;
   Trimesh *getParent() const { return parent; }
 
