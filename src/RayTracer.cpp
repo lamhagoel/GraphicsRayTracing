@@ -75,18 +75,83 @@ glm::dvec3 RayTracer::tracePixel(int i, int j) {
   if (!sceneLoaded())
     return col;
 
-  // normalized window coordinates (x,y)
-  double x = double(i) / double(buffer_width);
-  double y = double(j) / double(buffer_height);
+  
 
-  // calculates the address of the pixel in the buffer, *3 bc there are 3 colors?
-  unsigned char *pixel = buffer.data() + (i + j * buffer_width) * 3;
-  col = trace(x, y);
-  // map the values in col (in the range [0, 1]) to integers in the range [0, 255] RGB colors
-  pixel[0] = (int)(255.0 * col[0]);
-  pixel[1] = (int)(255.0 * col[1]);
-  pixel[2] = (int)(255.0 * col[2]);
+  if(!traceUI->aaSwitch()) {
+    // cout<<"TracePixel: "<<buffer_width<<" "<<buffer_height<<"\n";
+    // calculates the address of the pixel in the buffer, *3 bc there are 3 colors?
+
+    // normalized window coordinates (x,y)
+    double x = double(i) / double(buffer_width);
+    double y = double(j) / double(buffer_height);
+
+    unsigned char *pixel = buffer.data() + (i + j * buffer_width) * 3;
+    col = trace(x, y);
+    // map the values in col (in the range [0, 1]) to integers in the range [0, 255] RGB colors
+    pixel[0] = (int)(255.0 * col[0]);
+    pixel[1] = (int)(255.0 * col[1]);
+    pixel[2] = (int)(255.0 * col[2]);
+  } else {
+    unsigned char *pixel = buffer.data() + (i + j * buffer_width) * 3;
+    glm::dvec2 center = glm::dvec2((i + 0.5)/double(buffer_width), (j + 0.5)/double(buffer_height));
+    col = adaptative_supersampling(center, 1);
+    pixel[0] = (int)(255.0 * col[0]);
+    pixel[1] = (int)(255.0 * col[1]);
+    pixel[2] = (int)(255.0 * col[2]);
+  }
+  
   return col;
+}
+// TODO: include memorize hash or matrix
+glm::dvec3 RayTracer::adaptative_supersampling(glm::dvec2 center, int depth) {
+
+  // unsigned char *pixel = tempBuffer + (i + j * buffer_width) * 3;
+  glm::dvec3 traced_center = trace(center.x, center.y);
+
+  glm::dvec3 top_left = trace((center.x - pow(0.5, depth))/((double) buffer_width), (center.y - pow(0.5, depth))/((double) buffer_height));
+  glm::dvec3 top_right = trace((center.x - pow(0.5, depth))/((double) buffer_width), (center.y + pow(0.5, depth))/((double) buffer_height));
+  glm::dvec3 bottom_left = trace((center.x + pow(0.5, depth))/((double) buffer_width), (center.y - pow(0.5, depth))/((double) buffer_height));
+  glm::dvec3 bottom_right = trace((center.x + pow(0.5, depth))/((double) buffer_width), (center.y + pow(0.5, depth))/((double) buffer_height));
+
+  if (depth > supersampling_recursion) {
+    return ((double)4 * traced_center + top_left + top_right + bottom_left + bottom_right) / (double)8;
+  }
+
+  double color_dist1 = (double)colour_dist(top_left, traced_center);
+  double color_dist2 = (double)colour_dist(top_right, traced_center);
+  double color_dist3 = (double)colour_dist(bottom_left, traced_center);
+  double color_dist4 = (double)colour_dist(bottom_right, traced_center);
+
+  if (color_dist1 > supersampling_color_diff) {
+    top_left = adaptative_supersampling(glm::dvec2((center.x - pow(0.5, depth)), center.y - pow(0.5, depth)), depth + 1);
+  }
+
+  if (color_dist2 > supersampling_color_diff) {
+    top_right = adaptative_supersampling(glm::dvec2((center.x - pow(0.5, depth)), center.y + pow(0.5, depth)), depth + 1);
+  } 
+
+  if (color_dist3 > supersampling_color_diff) {
+    bottom_left = adaptative_supersampling(glm::dvec2((center.x + pow(0.5, depth)), center.y - pow(0.5, depth)), depth + 1);
+  }
+
+  if (color_dist4 > supersampling_color_diff) {
+    bottom_right = adaptative_supersampling(glm::dvec2((center.x + pow(0.5, depth)), center.y + pow(0.5, depth)), depth + 1);
+  }
+  
+  glm::dvec3 result = (double)4 * traced_center + top_left + top_right + bottom_left + bottom_right;
+  result = result / (double)8;
+  return result;
+
+}
+
+float RayTracer::colour_dist(glm::dvec3 e1, glm::dvec3 e2) {
+    glm::dvec3 e1_255 = 255.0 * e1;
+    glm::dvec3 e2_255 = 255.0 * e2;
+    float rmean = ((float) e1_255.x + (float) e2_255.x) / 2;
+    float r = (float)e1_255.x - (float)e2_255.x;
+    float g = (float)e1_255.y - (float)e2_255.y;
+    float b = (float)e1_255.z - (float)e2_255.z;
+    return std::sqrt((((512 + rmean) * r * r) / (256)) + 4 * g * g + (((767 - rmean) * b * b) / (256)));
 }
 
 #define VERBOSE 0
@@ -367,9 +432,10 @@ void RayTracer::traceImage(int w, int h) {
     }
   }
 
-  if(traceUI->aaSwitch()) {
-    aaImage();
-  }
+  // TODO: REMOVED
+  // if(traceUI->aaSwitch()) {
+  //   aaImage();
+  // }
   
   // YOUR CODE HERE
   // FIXME: Start one or more threads for ray tracing
@@ -390,7 +456,7 @@ int RayTracer::aaImage() {
   // YOUR CODE HERE
   // FIXME: Implement Anti-aliasing here
   //
-
+cout << "PANIC: do not enter \n";
   // Nothing to do if we weren't oversampling
   if (samples<=1) {
     return 0;
