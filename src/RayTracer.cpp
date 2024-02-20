@@ -38,6 +38,8 @@ bool debugMode = false;
 // Constant to stop the supersampling recursion
 static const double supersampling_recursion = 4;
 
+static const bool doJitterAntiAliasing = true;
+
 // Early termination parameters
 static const glm::dvec3 reflection_treshold = glm::dvec3(0.0001, 0.0001, 0.0001);
 static const glm::dvec3 refrac_reflect_treshold = glm::dvec3(0.001, 0.001, 0.001);
@@ -84,6 +86,7 @@ glm::dvec3 RayTracer::tracePixel(int i, int j) {
   if (!sceneLoaded())
     return col;
 
+  unsigned char *pixel = buffer.data() + (i + j * buffer_width) * 3;
   if(!traceUI->aaSwitch()) {
     // cout<<"TracePixel: "<<buffer_width<<" "<<buffer_height<<"\n";
     // calculates the address of the pixel in the buffer, *3 bc there are 3 colors?
@@ -92,21 +95,30 @@ glm::dvec3 RayTracer::tracePixel(int i, int j) {
     double x = double(i) / double(buffer_width);
     double y = double(j) / double(buffer_height);
 
-    unsigned char *pixel = buffer.data() + (i + j * buffer_width) * 3;
     col = trace(x, y);
+  } else if (!doJitterAntiAliasing) {
+    unsigned int *numRays = aaNumRaysPerPixel.data() + (i + j * buffer_width);
+    glm::dvec2 center = glm::dvec2((i + 0.5)/double(buffer_width), (j + 0.5)/double(buffer_height));
+    col = adaptative_supersampling(center, 1, numRays[0]);
+  } else {
+    // Jitter (Stochastic) Anti-Aliasing
+    for (int k = 0; k < samples; k++) {
+      for (int l = 0; l < samples; l++) {
+        // We wanna make sure that after adding the random noise, the new x,y are still in the planned subpixel
+        double jitterX = (((double)rand()) / RAND_MAX)/(double(buffer_width) * samples);
+        double jitterY = (((double)rand()) / RAND_MAX)/(double(buffer_height) * samples);
+        double x = (double(i) + double(k)/samples)/double(buffer_width) + jitterX;
+        double y = (double(j) + double(l)/samples)/double(buffer_height) + jitterY;
+
+        col += trace(x,y);
+      }
+    }
+    col = col / (double)(samples*samples);
+  }
     // map the values in col (in the range [0, 1]) to integers in the range [0, 255] RGB colors
     pixel[0] = (int)(255.0 * col[0]);
     pixel[1] = (int)(255.0 * col[1]);
     pixel[2] = (int)(255.0 * col[2]);
-  } else {
-    unsigned char *pixel = buffer.data() + (i + j * buffer_width) * 3;
-    unsigned int *numRays = aaNumRaysPerPixel.data() + (i + j * buffer_width);
-    glm::dvec2 center = glm::dvec2((i + 0.5)/double(buffer_width), (j + 0.5)/double(buffer_height));
-    col = adaptative_supersampling(center, 1, numRays[0]);
-    pixel[0] = (int)(255.0 * col[0]);
-    pixel[1] = (int)(255.0 * col[1]);
-    pixel[2] = (int)(255.0 * col[2]);
-  }
   
   return col;
 }
@@ -433,7 +445,7 @@ void RayTracer::traceSetup(int w, int h) {
   samples = traceUI->getSuperSamples();
   aaThresh = traceUI->getAaThreshold()*1000; // We revert the multiplication by 0.001 here because we wanna use the original value instead of scaling it between 0 to 1.
 
-  if (traceUI->aaSwitch()) {
+  if (traceUI->aaSwitch() && !doJitterAntiAliasing) {
     size_t imageSize = w * h;
     if (imageSize != aaNumRaysPerPixel.size()) {
       aaNumRaysPerPixel.resize(imageSize);
@@ -469,9 +481,9 @@ void RayTracer::traceImage(int w, int h) {
   /*
   * Uncomment this piece of code to output the antialiasing ray sampling intensity instead of the output raytraced image
   */
-  // if (traceUI->aaSwitch())
+  // if (traceUI->aaSwitch() && !doJitterAntiAliasing)
   // {
-  //   cout<< "aaSwitch is on";
+  //   // cout<< "aaSwitch is on\n";
   //   unsigned int minVal = aaNumRaysPerPixel.data()[0], maxVal = aaNumRaysPerPixel.data()[0];
 
   //   for (int i=0; i<w; i++) {
