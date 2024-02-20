@@ -55,7 +55,8 @@ glm::dvec3 Material::shade(Scene *scene, const ray &r, const isect &i) const {
   if (glm::dot(n_fix, -r.getDirection()) < 0) {
     n_fix = - n_fix;
   }
-  glm::dvec3 position = r.at(i) + RAY_EPSILON * n_fix;
+  //glm::dvec3 position = r.at(i) + RAY_EPSILON * n_fix;
+  glm::dvec3 position = r.at(i);
   
   // summation
   for ( const auto& pLight : scene->getAllLights() )
