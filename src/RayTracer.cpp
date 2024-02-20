@@ -35,9 +35,12 @@ extern TraceUI *traceUI;
 // set in the "trace single ray" mode in TraceGLWindow, for example.
 bool debugMode = false;
 
-// TODO: we can make it a parameter
 // Constant to stop the supersampling recursion
 static const double supersampling_recursion = 4;
+
+// Early termination parameters
+static const glm::dvec3 reflection_treshold = glm::dvec3(0.0001, 0.0001, 0.0001);
+static const glm::dvec3 refrac_reflect_treshold = glm::dvec3(0.001, 0.001, 0.001);
 
 // Trace a top-level ray through pixel(i,j), i.e. normalized window coordinates
 // (x,y), through the projection plane, and out into the scene. All we do is
@@ -61,10 +64,11 @@ glm::dvec3 RayTracer::trace(double x, double y) {
   // r.setDirection(dir); dir = glm::normalize(look + x * u + y * v);
   scene->getCamera().rayThrough(x, y, r);
   double dummy;
+  glm::dvec3 threshold = glm::dvec3(1.0, 1.0, 1.0);
   // traceUI->getDepth() returns the max depth of recursion 
   // glm::dvec3(1.0, 1.0, 1.0) = &thresh: Threshold for interpolation within block?
   glm::dvec3 ret = 
-      traceRay(r, glm::dvec3(1.0, 1.0, 1.0), traceUI->getDepth(), dummy);
+      traceRay(r, threshold, traceUI->getDepth(), dummy);
   // Returns min(max(x, minVal), maxVal) for each component in x using the floating-point
   // values minVal and maxVal.
   // Restrict the values to lie between 0 and 1
@@ -222,7 +226,11 @@ glm::dvec3 RayTracer::traceRay(ray &r, const glm::dvec3 &thresh, int depth,
       glm::dvec3 w_ref = glm::normalize(w_in - 2 * glm::dot(N, w_in)*N);
       ray r_reflection(pos, w_ref, glm::dvec3(1, 1, 1),
           ray::REFLECTION);
-      colorC += m.kr(i) * traceRay(r_reflection, thresh, depth - 1, t);
+      glm::dvec3 thresh_refl = thresh * m.kr(i);
+      if (thresh_refl.x > reflection_treshold.x || thresh_refl.y > reflection_treshold.y ||
+        thresh_refl.z > reflection_treshold.z) {
+        colorC += m.kr(i) * traceRay(r_reflection, thresh_refl, depth - 1, t);
+      }
     }
 
     // TODO: for refraction he said mantain a stack to know if u are inside or outside an object
@@ -287,7 +295,12 @@ glm::dvec3 RayTracer::traceRay(ray &r, const glm::dvec3 &thresh, int depth,
         // TODO: confirm if we multiply by m.kr(i) or not here
         // colorC += m.kr(i) * traceRay(t_i_reflection, thresh, depth - 1, t);
         // changed:
-        colorC += m.kr(i) * traceRay(t_i_reflection, thresh, depth - 1, t) * pow(m.kt(i), glm::dvec3(d));
+        glm::dvec3 reflection_kr_index = m.kr(i) * pow(m.kt(i), glm::dvec3(d));
+        glm::dvec3 thresh_refrac = thresh * reflection_kr_index;
+        if (thresh_refrac.x > refrac_reflect_treshold.x && thresh_refrac.y > refrac_reflect_treshold.y &&
+        thresh_refrac.z > refrac_reflect_treshold.z) {
+          colorC += reflection_kr_index * traceRay(t_i_reflection, thresh_refrac, depth - 1, t);
+        }
       }   
     }
     return colorC;
