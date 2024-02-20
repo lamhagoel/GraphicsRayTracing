@@ -38,6 +38,9 @@ public:
   void getBuffer(unsigned char *&buf, int &w, int &h);
   double aspectRatio();
 
+  glm::dvec3 adaptative_supersampling(glm::dvec2 center, int depth, unsigned int &numRays);
+  double colour_dist(glm::dvec3 e1, glm::dvec3 e2);
+
   void traceImage(int w, int h);
   int aaImage();
   bool checkRender();
@@ -60,6 +63,7 @@ private:
 
   std::unique_ptr<Scene> scene;
   std::vector<unsigned char> buffer;
+  std::vector<unsigned int> aaNumRaysPerPixel; // Only used for adaptive anti-aliasing
   double thresh;
   int buffer_width, buffer_height;
   bool m_bBufferReady;

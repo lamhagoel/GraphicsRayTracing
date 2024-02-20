@@ -27,7 +27,7 @@ using namespace std;
 extern TraceUI *traceUI;
 
 // TODO: what to do with light illuminating a back face of an object from inside the object
-// TODO: The Phong illumination model only really makes sense for opaque objects. So you'll 
+// TODO: The Phong illumination model only really makes sense for opaque objects. So you'll
 // have to decide how to apply it in a reasonable way (to you) for translucent objects
 // TODO: whether light hitting the inside (back) face of an object should leave a specular highlight
 
@@ -35,10 +35,15 @@ extern TraceUI *traceUI;
 // set in the "trace single ray" mode in TraceGLWindow, for example.
 bool debugMode = false;
 
+// TODO: we can make it a parameter
+// Constant to stop the supersampling recursion
+static const double supersampling_recursion = 4;
+
 // Trace a top-level ray through pixel(i,j), i.e. normalized window coordinates
 // (x,y), through the projection plane, and out into the scene. All we do is
 // enter the main ray-tracing method, getting things started by plugging in an
 // initial ray weight of (0.0,0.0,0.0) and an initial recursion depth of 0.
+
 
 glm::dvec3 RayTracer::trace(double x, double y) {
   // Clear out the ray cache in the scene for debugging purposes,
@@ -60,7 +65,7 @@ glm::dvec3 RayTracer::trace(double x, double y) {
   // glm::dvec3(1.0, 1.0, 1.0) = &thresh: Threshold for interpolation within block?
   glm::dvec3 ret = 
       traceRay(r, glm::dvec3(1.0, 1.0, 1.0), traceUI->getDepth(), dummy);
-  // Returns min(max(x, minVal), maxVal) for each component in x using the floating-point 
+  // Returns min(max(x, minVal), maxVal) for each component in x using the floating-point
   // values minVal and maxVal.
   // Restrict the values to lie between 0 and 1
   ret = glm::clamp(ret, 0.0, 1.0);
@@ -74,8 +79,6 @@ glm::dvec3 RayTracer::tracePixel(int i, int j) {
 
   if (!sceneLoaded())
     return col;
-
-  
 
   if(!traceUI->aaSwitch()) {
     // cout<<"TracePixel: "<<buffer_width<<" "<<buffer_height<<"\n";
@@ -93,8 +96,9 @@ glm::dvec3 RayTracer::tracePixel(int i, int j) {
     pixel[2] = (int)(255.0 * col[2]);
   } else {
     unsigned char *pixel = buffer.data() + (i + j * buffer_width) * 3;
+    unsigned int *numRays = aaNumRaysPerPixel.data() + (i + j * buffer_width);
     glm::dvec2 center = glm::dvec2((i + 0.5)/double(buffer_width), (j + 0.5)/double(buffer_height));
-    col = adaptative_supersampling(center, 1);
+    col = adaptative_supersampling(center, 1, numRays[0]);
     pixel[0] = (int)(255.0 * col[0]);
     pixel[1] = (int)(255.0 * col[1]);
     pixel[2] = (int)(255.0 * col[2]);
@@ -103,16 +107,19 @@ glm::dvec3 RayTracer::tracePixel(int i, int j) {
   return col;
 }
 // TODO: include memorize hash or matrix
-glm::dvec3 RayTracer::adaptative_supersampling(glm::dvec2 center, int depth) {
+glm::dvec3 RayTracer::adaptative_supersampling(glm::dvec2 center, int depth, unsigned int &numRays) {
+
+  // cout<<"RayTracer.cpp RayTracer::adaptative_supersampling "<<center[0]<<" "<<center[1]<<" "<<depth<<"\n";
 
   // unsigned char *pixel = tempBuffer + (i + j * buffer_width) * 3;
   glm::dvec3 traced_center = trace(center.x, center.y);
 
-  glm::dvec3 top_left = trace((center.x - pow(0.5, depth))/((double) buffer_width), (center.y - pow(0.5, depth))/((double) buffer_height));
-  glm::dvec3 top_right = trace((center.x - pow(0.5, depth))/((double) buffer_width), (center.y + pow(0.5, depth))/((double) buffer_height));
-  glm::dvec3 bottom_left = trace((center.x + pow(0.5, depth))/((double) buffer_width), (center.y - pow(0.5, depth))/((double) buffer_height));
-  glm::dvec3 bottom_right = trace((center.x + pow(0.5, depth))/((double) buffer_width), (center.y + pow(0.5, depth))/((double) buffer_height));
+  glm::dvec3 top_left = trace(center.x - pow(0.5, depth)/(double) buffer_width, center.y - pow(0.5, depth)/(double) buffer_height);
+  glm::dvec3 top_right = trace(center.x - pow(0.5, depth)/(double) buffer_width, center.y + pow(0.5, depth)/(double) buffer_height);
+  glm::dvec3 bottom_left = trace(center.x + pow(0.5, depth)/(double) buffer_width, center.y - pow(0.5, depth)/(double) buffer_height);
+  glm::dvec3 bottom_right = trace(center.x + pow(0.5, depth)/(double) buffer_width, center.y + pow(0.5, depth)/(double) buffer_height);
 
+  numRays += 5;
   if (depth > supersampling_recursion) {
     return ((double)4 * traced_center + top_left + top_right + bottom_left + bottom_right) / (double)8;
   }
@@ -122,36 +129,49 @@ glm::dvec3 RayTracer::adaptative_supersampling(glm::dvec2 center, int depth) {
   double color_dist3 = (double)colour_dist(bottom_left, traced_center);
   double color_dist4 = (double)colour_dist(bottom_right, traced_center);
 
-  if (color_dist1 > supersampling_color_diff) {
-    top_left = adaptative_supersampling(glm::dvec2((center.x - pow(0.5, depth)), center.y - pow(0.5, depth)), depth + 1);
+  glm::dvec3 result(0, 0, 0);
+
+  if (color_dist1 > aaThresh) {
+    result += adaptative_supersampling(glm::dvec2(center.x - pow(0.5, depth+1)/(double) buffer_width, center.y - pow(0.5, depth+1)/(double) buffer_height), depth + 1, numRays);
+  }
+  else {
+    result += (traced_center + top_left)/ (double)2;
   }
 
-  if (color_dist2 > supersampling_color_diff) {
-    top_right = adaptative_supersampling(glm::dvec2((center.x - pow(0.5, depth)), center.y + pow(0.5, depth)), depth + 1);
-  } 
-
-  if (color_dist3 > supersampling_color_diff) {
-    bottom_left = adaptative_supersampling(glm::dvec2((center.x + pow(0.5, depth)), center.y - pow(0.5, depth)), depth + 1);
+  if (color_dist2 > aaThresh) {
+    result += adaptative_supersampling(glm::dvec2(center.x - pow(0.5, depth+1)/(double) buffer_width, center.y + pow(0.5, depth+1)/(double) buffer_height), depth + 1, numRays);
+  }
+  else {
+    result += (traced_center + top_right)/ (double)2;
   }
 
-  if (color_dist4 > supersampling_color_diff) {
-    bottom_right = adaptative_supersampling(glm::dvec2((center.x + pow(0.5, depth)), center.y + pow(0.5, depth)), depth + 1);
+  if (color_dist3 > aaThresh) {
+    result += adaptative_supersampling(glm::dvec2(center.x + pow(0.5, depth+1)/(double) buffer_width, center.y - pow(0.5, depth+1)/(double) buffer_height), depth + 1, numRays);
+  }
+  else {
+    result += (traced_center + bottom_left)/ (double)2;
+  }
+
+  if (color_dist4 > aaThresh) {
+    result += adaptative_supersampling(glm::dvec2(center.x + pow(0.5, depth+1)/(double) buffer_width, center.y + pow(0.5, depth+1)/(double) buffer_height), depth + 1, numRays);
+  }
+  else {
+    result += (traced_center + bottom_right)/ (double)2;
   }
   
-  glm::dvec3 result = (double)4 * traced_center + top_left + top_right + bottom_left + bottom_right;
-  result = result / (double)8;
+  result = result / (double)4;
   return result;
 
 }
 
-float RayTracer::colour_dist(glm::dvec3 e1, glm::dvec3 e2) {
+double RayTracer::colour_dist(glm::dvec3 e1, glm::dvec3 e2) {
     glm::dvec3 e1_255 = 255.0 * e1;
     glm::dvec3 e2_255 = 255.0 * e2;
-    float rmean = ((float) e1_255.x + (float) e2_255.x) / 2;
-    float r = (float)e1_255.x - (float)e2_255.x;
-    float g = (float)e1_255.y - (float)e2_255.y;
-    float b = (float)e1_255.z - (float)e2_255.z;
-    return std::sqrt((((512 + rmean) * r * r) / (256)) + 4 * g * g + (((767 - rmean) * b * b) / (256)));
+    long rmean = ((long) e1_255.x + (long) e2_255.x) / 2;
+    long r = (long)e1_255.x - (long)e2_255.x;
+    long g = (long)e1_255.y - (long)e2_255.y;
+    long b = (long)e1_255.z - (long)e2_255.z;
+    return std::sqrt((((512 + rmean) * r * r) >> 8 ) + ((g * g) << 2) + (((767 - rmean) * b * b) >> 8));
 }
 
 #define VERBOSE 0
@@ -398,11 +418,18 @@ void RayTracer::traceSetup(int w, int h) {
   block_size = traceUI->getBlockSize();
   thresh = traceUI->getThreshold();
   samples = traceUI->getSuperSamples();
-  aaThresh = traceUI->getAaThreshold();
+  aaThresh = traceUI->getAaThreshold()*1000; // We revert the multiplication by 0.001 here because we wanna use the original value instead of scaling it between 0 to 1.
+
+  if (traceUI->aaSwitch()) {
+    size_t imageSize = w * h;
+    if (imageSize != aaNumRaysPerPixel.size()) {
+      aaNumRaysPerPixel.resize(imageSize);
+    }
+    std::fill(aaNumRaysPerPixel.begin(), aaNumRaysPerPixel.end(), 0);
+  }
 
   // YOUR CODE HERE
   // FIXME: Additional initializations
-
 }
 
 /*
@@ -417,12 +444,6 @@ void RayTracer::traceSetup(int w, int h) {
  */
 void RayTracer::traceImage(int w, int h) {
   // Always call traceSetup before rendering anything.
-  if(traceUI->aaSwitch()) {
-    samples = traceUI ->getSuperSamples();
-    h = h * samples;
-    w = w * samples;
-  }
-  //TODO: the value of samples changes after this (incorrectly if the anti-aliasing is not selected). Tried fixing it, verify.
   traceSetup(w, h);
   scene->buildBVH();
   for (int i = 0; i < w; i++)
@@ -432,9 +453,39 @@ void RayTracer::traceImage(int w, int h) {
     }
   }
 
-  // TODO: REMOVED
-  // if(traceUI->aaSwitch()) {
-  //   aaImage();
+  /*
+  * Uncomment this piece of code to output the antialiasing ray sampling intensity instead of the output raytraced image
+  */
+  // if (traceUI->aaSwitch())
+  // {
+  //   cout<< "aaSwitch is on";
+  //   unsigned int minVal = aaNumRaysPerPixel.data()[0], maxVal = aaNumRaysPerPixel.data()[0];
+
+  //   for (int i=0; i<w; i++) {
+  //     for (int j=0; j < h; j++) {
+  //       int loc = (i + j * w);
+  //       unsigned int val = (aaNumRaysPerPixel.data() + loc)[0];
+  //       // cout<<val<<" ";
+  //       if (minVal > val) {
+  //         minVal = val;
+  //       }
+  //       if (maxVal < val) {
+  //         maxVal = val;
+  //       }
+
+  //     }
+  //     // cout<<"\n";
+
+  //     for (int i=0; i<w; i++) {
+  //       for (int j=0; j<h; j++) {
+  //         int loc = (i + j * w);
+  //         unsigned int val = (aaNumRaysPerPixel.data() + loc)[0];
+  //         val = ((val-minVal)*255/(maxVal-minVal));
+  //         unsigned char *pixel = buffer.data() + loc * 3;
+  //         pixel[0] = pixel[1] = pixel[2] = val;
+  //       }
+  //     }
+  //   }
   // }
   
   // YOUR CODE HERE
@@ -447,71 +498,67 @@ void RayTracer::traceImage(int w, int h) {
   //       while rendering.
 }
 
-// TODO: last part
-// TODO: Check the role of threshold??
-// TODO: Verify if it works as expected
 int RayTracer::aaImage() {
   // YOUR CODE HERE
   // FIXME: Implement Anti-aliasing here
-  // YOUR CODE HERE
-  // FIXME: Implement Anti-aliasing here
-  //
-cout << "PANIC: do not enter \n";
-  // Nothing to do if we weren't oversampling
-  if (samples<=1) {
-    return 0;
-  }
 
-  int overSamplingFactor = samples*samples;
-  int imageSize = buffer.size()/overSamplingFactor;
+  // WE HAVE REMOVED THIS CODE BECAUSE WE ARE NOW DOING ADAPTIVE ANTI-ALIASING NOW INSTEAD
 
-  int w = 0, h = 0;
-  unsigned char *buf = NULL;
-  getBuffer(buf, w, h);
-  w = w/samples;
-  h = h/samples;
+//   // Nothing to do if we weren't oversampling
+//   if (samples<=1) {
+//     return 0;
+//   }
 
-  if (imageSize != w * h * 3) {
-    // Current buffer size is not as expected - maybe aaImage has been called previously?
-    // CommandLineUI explicitly calls it, but graphical UI doesn't I think?
-    cout<<"Double call to aaImage?\n";
-    return 0;
-  }
+//   int overSamplingFactor = samples*samples;
+//   int imageSize = buffer.size()/overSamplingFactor;
 
-  std::vector<unsigned char> tempBuffer(imageSize);
+//   int w = 0, h = 0;
+//   unsigned char *buf = NULL;
+//   getBuffer(buf, w, h);
+//   w = w/samples;
+//   h = h/samples;
 
-  // bool bufferzeros = std::all_of(buffer.begin(), buffer.end(), [](int i) { return i==0; });
+//   if (imageSize != w * h * 3) {
+//     // Current buffer size is not as expected - maybe aaImage has been called previously?
+//     // CommandLineUI explicitly calls it, but graphical UI doesn't I think?
+//     cout<<"Double call to aaImage?\n";
+//     return 0;
+//   }
 
-  for (int j = 0; j < h; j++) {
-    for (int i = 0; i < w; i++) {
-      unsigned char *pixel = tempBuffer.data() + (i + j * w) * 3;
-      // long int sum0 = 0, sum1 = 0, sum2 = 0; // TODO: Can we change this to a vector instead?
-      glm::dvec3 sum = glm::dvec3(0, 0, 0);
-      for (int l = 0; l < samples; l++) {
-        for (int k = 0; k < samples; k++) {
-          unsigned char *bufferLoc = buf + (j*w*samples*samples + l*w*samples + i*samples + k) * 3;
-          sum += glm::dvec3((int)bufferLoc[0], (int)bufferLoc[1], (int)bufferLoc[2]);
-          // sum0 += (int)bufferLoc[0];
-          // sum1 += (int)bufferLoc[1];
-          // sum2 += (int)bufferLoc[2];
-        }
-      }
-      pixel[0] = (int)(sum.x/overSamplingFactor);
-      pixel[1] = (int)(sum.y/overSamplingFactor);
-      pixel[2] = (int)(sum.z/overSamplingFactor);
-    }
-  }
+//   std::vector<unsigned char> tempBuffer(imageSize);
 
-  // bool tempBufferZeros = std::all_of(tempBuffer.begin(), tempBuffer.end(), [](int i) { return i==0; });
+//   // bool bufferzeros = std::all_of(buffer.begin(), buffer.end(), [](int i) { return i==0; });
 
-  size_t newBufferSize = imageSize;;
-  if (newBufferSize != buffer.size()) {
-    bufferSize = newBufferSize;
-    buffer.resize(bufferSize);
-  }
-  buffer_width = w;
-  buffer_height = h;
-  buffer.assign(tempBuffer.begin(), tempBuffer.end());  
+//   for (int j = 0; j < h; j++) {
+//     for (int i = 0; i < w; i++) {
+//       unsigned char *pixel = tempBuffer.data() + (i + j * w) * 3;
+//       // long int sum0 = 0, sum1 = 0, sum2 = 0; // TODO: Can we change this to a vector instead?
+//       glm::dvec3 sum = glm::dvec3(0, 0, 0);
+//       for (int l = 0; l < samples; l++) {
+//         for (int k = 0; k < samples; k++) {
+//           unsigned char *bufferLoc = buf + (j*w*samples*samples + l*w*samples + i*samples + k) * 3;
+//           sum += glm::dvec3((int)bufferLoc[0], (int)bufferLoc[1], (int)bufferLoc[2]);
+//           // sum0 += (int)bufferLoc[0];
+//           // sum1 += (int)bufferLoc[1];
+//           // sum2 += (int)bufferLoc[2];
+//         }
+//       }
+//       pixel[0] = (int)(sum.x/overSamplingFactor);
+//       pixel[1] = (int)(sum.y/overSamplingFactor);
+//       pixel[2] = (int)(sum.z/overSamplingFactor);
+//     }
+//   }
+
+//   // bool tempBufferZeros = std::all_of(tempBuffer.begin(), tempBuffer.end(), [](int i) { return i==0; });
+
+//   size_t newBufferSize = imageSize;;
+//   if (newBufferSize != buffer.size()) {
+//     bufferSize = newBufferSize;
+//     buffer.resize(bufferSize);
+//   }
+//   buffer_width = w;
+//   buffer_height = h;
+//   buffer.assign(tempBuffer.begin(), tempBuffer.end());
 
   // std::fill(buffer.begin(), buffer.end(), 0);
   // m_bBufferReady = true;
