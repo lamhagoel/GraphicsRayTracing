@@ -58,6 +58,11 @@ void BVHNode::splitNode() { // For top-down BVH construction
 
     int numObjects = objects.size();
 
+    if (numObjects == 0) {
+        this->boundingBox = BoundingBox();
+        return;
+    }
+
     if (numObjects == 1) {
         this->boundingBox = BoundingBox();
         (this->boundingBox).merge(objects[0]->getBoundingBox());
