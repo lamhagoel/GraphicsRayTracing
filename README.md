@@ -1,0 +1,1 @@
+In this project, Lamha and I we implemented a ray-tracing algorithm with ray-object collision detection by using bounding volume hierarchy (BVH). We also included texture and cube mapping, antialiasing by adaptive supersampling, adaptive termination criterion for tracing rays based on ray contribution and implementation of stochastic (jittered) supersampling.
